@@ -71,7 +71,7 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000 // 1 hora
     await user.save()
 
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`
+    const resetLink = `${process.env.FRONTEND_URL}api/users/reset-password/${resetToken}`
 
     await sendEmail({
       to: user.email,
