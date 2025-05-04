@@ -1,17 +1,14 @@
 import express from 'express'
 import bcrypt from 'bcrypt'
-
 import crypto from 'crypto'
 
-import { sendEmail } from '../utils/sendEmail.js'
 import User from '../models/User.js'
+
+import { sendEmail } from '../utils/sendEmail.js'
+import { generateToken, isAuth } from '../middleware/verifyToken.js'
 
 const router = express.Router()
 
-resetPasswordToken: { type: String }
-resetPasswordExpires: { type: Date }
-
-// Register.
 router.post('/register', async (req, res) => {
   try {
     const salt = await bcrypt.genSalt(10)
@@ -24,11 +21,10 @@ router.post('/register', async (req, res) => {
     })
 
     const user = await newUser.save()
-    res.status(200).json(user._id)
+    const token = generateToken(user)
+    res.status(200).json({ _id: user._id, userName: user.userName, email: user.email, token })
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: 'Failed to register user', message: err.message })
+    res.status(500).json({ error: 'Failed to register user', message: err.message })
   }
 })
 
@@ -38,24 +34,23 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ userName: req.body.userName })
 
     if (!user) {
-      res.status(400).json('Wrong username or password!')
-    } else {
-      const validPassword = await bcrypt.compare(
-        req.body.password,
-        user.password,
-      )
-
-      if (!validPassword) {
-        res.status(400).json('Wrong username or password!')
-      } else {
-        res.status(200).json(user)
-      }
+      return res.status(400).json({ message: 'Usuário ou senha incorretos' })
     }
+
+    const validPassword = await bcrypt.compare(req.body.password, user.password)
+
+    if (!validPassword) {
+      return res.status(400).json({ message: 'Usuário ou senha incorretos' })
+    }
+
+    const token = generateToken(user)
+    res.status(200).json({ _id: user._id, userName: user.userName, email: user.email, token })
   } catch (err) {
     res.status(500).json({ error: 'Failed to log in', message: err.message })
   }
 })
 
+// ROTA PARA SOLICITAR RESET DE SENHA
 // ROTA PARA SOLICITAR RESET DE SENHA
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body
@@ -71,7 +66,7 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000 // 1 hora
     await user.save()
 
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`
+    const resetLink = `${process.env.FRONTEND_URL}api/users/reset-password/${resetToken}`
 
     await sendEmail({
       to: user.email,
@@ -121,6 +116,17 @@ router.post('/reset-password/:token', async (req, res) => {
     res.status(200).json({ message: 'Senha atualizada com sucesso.' })
   } catch (err) {
     res.status(500).json({ message: 'Erro ao redefinir senha', error: err.message })
+  }
+})
+
+// Exemplo de rota protegida
+router.get('/profile', isAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password')
+    if (!user) return res.status(404).json({ message: 'Usuário não encontrado' })
+    res.status(200).json(user)
+  } catch (err) {
+    res.status(500).json({ message: 'Erro ao buscar dados do usuário', error: err.message })
   }
 })
 
