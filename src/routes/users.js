@@ -59,9 +59,12 @@ router.post('/login', async (req, res) => {
 // ROTA PARA SOLICITAR RESET DE SENHA
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body
+
   try {
     const user = await User.findOne({ email })
-    if (!user) return res.status(404).json({ message: 'Usuário não encontrado' })
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado' })
+    }
 
     const resetToken = crypto.randomBytes(32).toString('hex')
     user.resetPasswordToken = resetToken
@@ -69,9 +72,25 @@ router.post('/forgot-password', async (req, res) => {
     await user.save()
 
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`
-    const message = `Você solicitou a redefinição de senha. Acesse: ${resetLink}`
 
-    await sendEmail(user.email, 'Recuperação de Senha', message)
+    await sendEmail({
+      to: user.email,
+      subject: 'Recuperação de Senha',
+      text: `Você solicitou a redefinição de senha. Acesse: ${resetLink}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2>Olá, ${user.userName}!</h2>
+          <p>Você solicitou a redefinição da sua senha.</p>
+          <p>Clique no botão abaixo para criar uma nova senha:</p>
+          <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #1e88e5; color: #fff; text-decoration: none; border-radius: 4px;">
+            Redefinir Senha
+          </a>
+          <p>Esse link é válido por 1 hora. Se você não solicitou isso, ignore este e-mail.</p>
+          <br />
+          <p style="font-size: 12px; color: #999;">Project One • Não responda esta mensagem</p>
+        </div>
+      `,
+    })
 
     res.status(200).json({ message: 'E-mail de recuperação enviado.' })
   } catch (err) {
