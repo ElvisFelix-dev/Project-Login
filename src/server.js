@@ -19,8 +19,12 @@ mongoose
   })
 
 const app = express()
+const allowedOrigins = ['https://lembrou.netlify.app']; // ou mais se quiser
 
-app.use(cors())
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true, // se estiver usando cookies ou autenticação
+}));
 app.use(express.json())
 
 app.use('/api/itens', pinRoute)
