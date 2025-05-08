@@ -4,7 +4,7 @@ import cors from 'cors'
 
 import dotEnv from 'dotenv'
 
-import pinRoute from './routes/itens.js'
+import itemsRouter from './routes/itens.js'
 import userRoute from './routes/users.js'
 
 dotEnv.config()
@@ -27,7 +27,7 @@ app.use(cors({
 }));
 app.use(express.json())
 
-app.use('/api/itens', pinRoute)
+app.use('/api/items', itemsRouter)
 app.use('/api/users', userRoute)
 
 app.listen(3333, () => {
