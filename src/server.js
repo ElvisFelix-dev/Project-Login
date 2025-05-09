@@ -22,9 +22,10 @@ const app = express()
 const allowedOrigins = ['https://lembrou.netlify.app']; // ou mais se quiser
 
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true, // se estiver usando cookies ou autenticação
-}));
+  origin: 'https://lembrou.netlify.app', // ou ['https://lembrou.netlify.app'] se quiser mais origens
+  credentials: true
+}))
+
 app.use(express.json())
 
 app.use('/api/items', itemsRouter)
